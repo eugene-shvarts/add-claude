@@ -1,6 +1,7 @@
 from .cache_utils import *
 from .gpt3 import *
 from .databricks import *
+from .anthropic import *
 from .hf import HFModel
 from .colbertv2 import ColBERTv2
 from .sentence_vectorizer import *
