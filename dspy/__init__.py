@@ -18,6 +18,7 @@ settings = dsp.settings
 
 OpenAI = dsp.GPT3
 Databricks = dsp.Databricks
+Claude = dsp.Claude
 Cohere = dsp.Cohere
 ColBERTv2 = dsp.ColBERTv2
 Pyserini = dsp.PyseriniRetriever

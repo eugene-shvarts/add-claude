@@ -46,7 +46,7 @@ class LM(ABC):
 
             if prompt != last_prompt:
 
-                if provider=="clarifai":
+                if provider in ["clarifai", "anthropic"]:
                     printed.append(
                         (
                             prompt,
@@ -78,15 +78,17 @@ class LM(ABC):
             text = ""
             if provider == "cohere":
                 text = choices[0].text
-            elif provider == "openai" or provider == "ollama":
+            elif provider in ["openai", "ollama"]:
                 text = ' ' + self._get_choice_text(choices[0]).strip()
+            elif provider == "anthropic":
+                text = ' ' + self._get_choice_text(choices).strip()
             elif provider == "clarifai":
                 text=choices
             else:
                 text = choices[0]["text"]
             self.print_green(text, end="")
 
-            if len(choices) > 1:
+            if provider != "anthropic" and len(choices) > 1:
                 self.print_red(f" \t (and {len(choices)-1} other completions)", end="")
             print("\n\n\n")
 

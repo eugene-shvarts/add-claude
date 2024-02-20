@@ -17,6 +17,7 @@ from typing import Any, Literal, Optional, cast
 import dsp
 import backoff
 import anthropic
+from anthropic import HUMAN_PROMPT, AI_PROMPT
 
 from dsp.modules.cache_utils import CacheMemory, NotebookCacheMemory, cache_turn_on
 from dsp.modules.lm import LM
@@ -50,9 +51,9 @@ class Claude(LM):
         super().__init__(model)
 
         self.anthropic = anthropic.Anthropic(
-            model=model,
             api_key=api_key
         )
+        self.provider = "anthropic"
 
         default_model_type = (
             "text"
@@ -60,15 +61,14 @@ class Claude(LM):
         self.model_type = model_type if model_type else default_model_type
 
         self.kwargs = {
+            "model": model,
             "temperature": 0.0,
-            "max_tokens": 150,
             "top_p": 1,
-            "frequency_penalty": 0,
-            "presence_penalty": 0,
             "n": 1,
             **kwargs,
         }  # TODO: add kwargs above for </s>
 
+        self.kwargs["max_tokens" if model_type == "chat" else "max_tokens_to_sample"] = 150
         self.history: list[dict[str, Any]] = []
 
     def _anthropic_client(self):
@@ -78,14 +78,18 @@ class Claude(LM):
         raw_kwargs = kwargs
 
         kwargs = {**self.kwargs, **kwargs}
+        for forbidden_kwarg in ["n"]:
+            if forbidden_kwarg in kwargs:
+                del kwargs[forbidden_kwarg]
+   
         if self.model_type == "chat":
             # caching mechanism requires hashable kwargs
             kwargs["messages"] = [{"role": "user", "content": prompt}]
-            kwargs = {"stringify_request": json.dumps(kwargs)}
+            # kwargs = {"stringify_request": json.dumps(kwargs)}
             response = self.chat_request(**kwargs)
 
         else:
-            kwargs["prompt"] = prompt
+            kwargs["prompt"] = f"{HUMAN_PROMPT} {prompt}{AI_PROMPT}"
             response = self.completions_request(**kwargs)
 
         history = {
@@ -106,12 +110,13 @@ class Claude(LM):
     )
     def request(self, prompt: str, **kwargs):
         """Handles retreival of Claude completions whilst handling rate limiting and caching."""
-        if "model_type" in kwargs:
-            del kwargs["model_type"]
+        for forbidden_kwarg in ["model_type"]:
+            if forbidden_kwarg in kwargs:
+                del kwargs[forbidden_kwarg]
 
         return self.basic_request(prompt, **kwargs)
 
-    def _get_choice_text(self, choice: dict[str, Any]) -> str:
+    def _get_choice_text(self, choice) -> str:
         if self.model_type == "chat":
             return choice.content[0].text
         return choice.completion
@@ -146,14 +151,11 @@ class Claude(LM):
         response = self.request(prompt, **kwargs)
         choices = [response]
 
-        if dsp.settings.log_anthropic_usage:
-            self.log_usage(response)
-
         completions = [self._get_choice_text(c) for c in choices]
         return completions
     
     def chat_request(self, **kwargs):
-        return self.anthropic.completions.create(**kwargs)
+        return self.anthropic.messages.create(**kwargs)
     
     def completions_request(self, **kwargs):
-        return self.anthropic.messages.create(**kwargs)
+        return self.anthropic.completions.create(**kwargs)
