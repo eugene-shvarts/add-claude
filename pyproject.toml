@@ -56,7 +56,7 @@ docs = [
 homepage = "https://github.com/stanfordnlp/dspy"
 
 [tool.poetry]
-name = "dspy"
+name = "dspy-ai"
 version = "2.0.8"
 description = "DSPy"
 authors = ["Omar Khattab <okhattab@stanford.edu>"]
